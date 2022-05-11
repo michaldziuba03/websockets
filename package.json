@@ -1,0 +1,34 @@
+{
+  "name": "@mich4l/websockets-ts-simplified",
+  "version": "1.0.0",
+  "description": "Simplified websockets server implementation",
+  "main": "lib/index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mich4ld/websockets-ts.git"
+  },
+  "keywords": [
+    "ws",
+    "websockets",
+    "websocket",
+    "realtime",
+    "real-time",
+    "sockets",
+    "socket"
+  ],
+  "author": "mich4ld <mchldziuba@protonmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mich4ld/websockets-ts/issues"
+  },
+  "homepage": "https://github.com/mich4ld/websockets-ts#readme",
+  "dependencies": {
+    "@types/node": "^17.0.32"
+  }
+}
