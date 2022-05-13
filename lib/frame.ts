@@ -21,7 +21,7 @@ function generateFirstByte(options: ICreateFrameOptions): number {
 export function createReplyFrame(payload: Buffer, options: ICreateFrameOptions) {
     const dataLen = payload.byteLength;
 
-    const firstByte = 129; //generateFirstByte(options);
+    const firstByte = generateFirstByte(options); // 129;
     const payloadLen = dataLen === 126 ? 126 : dataLen;
     const frameSize = 2 + (dataLen === 126 ? 2: 0) + dataLen; 
 

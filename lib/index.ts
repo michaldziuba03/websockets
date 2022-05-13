@@ -21,6 +21,11 @@ const server = new Server((req, res) => {
         if (frame.opcode === 0x1) {
             console.log(frame.payload.toString('utf-8'));
         }
+
+        if (frame.opcode === 0x8) {
+            console.log('Closing connection...');
+            req.socket.end();
+        }
     });
 })
 
