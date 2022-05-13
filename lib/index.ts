@@ -8,7 +8,7 @@ function handleBadWebsocketConnection(res: ServerResponse) {
 }
 
 function hashWebsocketKey(wsKey: string): string {
-    const uuid = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'; //randomUUID();
+    const uuid = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
     const hash = createHash('sha1');
     
     const dataToHash = wsKey + uuid
@@ -50,12 +50,14 @@ interface IFrame {
     rsv2: number;
     rsv3: number;
     opcode: number;
+    mask: boolean;
+    payloadLen: number;
 }
 
 function readFrame(chunk: Buffer) {
-    const firstByte = chunk.readUint8(0);
-    const bits = dec2bin(firstByte);
-    console.log(`Bits:`, bits);
+    // parsing first byte of frame:
+    let byteOffset = 0;
+    const firstByte = chunk.readUint8(byteOffset);
 
     const fin = (firstByte >> 7) & 0x1;
 
@@ -65,12 +67,45 @@ function readFrame(chunk: Buffer) {
 
     const opcode = firstByte & 15;
     
+    // parsing second byte of frame:
+    byteOffset++;
+    const secondByte = chunk.readUInt8(byteOffset);
+
+    const mask = (secondByte >> 7) & 0x1;
+    let payloadLen = secondByte & 127;
+
+    // parsing another bytes of frame:
+    byteOffset++;
+
+    if (payloadLen === 126) {
+        payloadLen = chunk.readUint16BE(byteOffset);
+
+        byteOffset += 2; // because we read 16 bits (2 bytes).
+    }
+
+    if (payloadLen === 127) {
+        const biguintLen = chunk.readBigUint64BE(byteOffset);
+        payloadLen = Number(biguintLen); // bad and slow way.
+        byteOffset += 8; // because we read 64 bits (8 bytes).
+    }
+
+    let maskingKey = 0;
+    if (mask) {
+        maskingKey = chunk.readUInt32BE(byteOffset);
+        byteOffset += 4;
+    }
+
+    const payload = Buffer.alloc(payloadLen);
+
+    console.log(`Bits:`, dec2bin(firstByte), dec2bin(secondByte));
     const frame: IFrame = {
         fin: Boolean(fin),
         rsv1,
         rsv2,
         rsv3,
         opcode,
+        mask: Boolean(mask),
+        payloadLen,
     }
 
     console.log(frame);
