@@ -1,4 +1,4 @@
 # Websockets
-Simplified websockets implementation in TypeScript
+Simplified websockets server implementation in TypeScript
 
 work in progress
