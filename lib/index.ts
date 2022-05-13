@@ -40,9 +40,45 @@ const server = new Server((req, res) => {
     res.end();
 
     req.socket.on('data', (buff) => {
-        console.log('new data');
+        readFrame(buff);
     });
 })
+
+interface IFrame {
+    fin: boolean;
+    rsv1: number;
+    rsv2: number;
+    rsv3: number;
+    opcode: number;
+}
+
+function readFrame(chunk: Buffer) {
+    const firstByte = chunk.readUint8(0);
+    const bits = dec2bin(firstByte);
+    console.log(`Bits:`, bits);
+
+    const fin = (firstByte >> 7) & 0x1;
+
+    const rsv1 = (firstByte >> 6) & 0x1;
+    const rsv2 = (firstByte >> 5) & 0x1;
+    const rsv3 = (firstByte >> 4) & 0x1;
+
+    const opcode = firstByte & 15;
+    
+    const frame: IFrame = {
+        fin: Boolean(fin),
+        rsv1,
+        rsv2,
+        rsv3,
+        opcode,
+    }
+
+    console.log(frame);
+}
+
+function dec2bin(dec: number) {
+    return (dec >>> 0).toString(2);
+}
 
 server.listen(8080);
 console.log("Server starting...");
