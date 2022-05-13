@@ -52,6 +52,7 @@ interface IFrame {
     opcode: number;
     mask: boolean;
     payloadLen: number;
+    payload: Buffer;
 }
 
 function readFrame(chunk: Buffer) {
@@ -89,15 +90,24 @@ function readFrame(chunk: Buffer) {
         byteOffset += 8; // because we read 64 bits (8 bytes).
     }
 
-    let maskingKey = 0;
+    let maskingKey = Buffer.alloc(4); //0;
     if (mask) {
-        maskingKey = chunk.readUInt32BE(byteOffset);
-        byteOffset += 4;
+        maskingKey = chunk.slice(byteOffset, byteOffset + 4) //chunk.readUInt32BE(byteOffset);
+        byteOffset += 4; // because we read 32 bits (4 bytes).
     }
 
+    const rawPayload = chunk.slice(byteOffset);
     const payload = Buffer.alloc(payloadLen);
 
-    console.log(`Bits:`, dec2bin(firstByte), dec2bin(secondByte));
+    for (let i = 0; i < payloadLen; i++) {
+        const j = i % 4;
+        const decoded = rawPayload[i] ^ (maskingKey[j]);
+
+        payload.writeUInt8(decoded, i);
+    }
+
+    console.log('data:', payload.toString('utf-8'));
+
     const frame: IFrame = {
         fin: Boolean(fin),
         rsv1,
@@ -106,6 +116,7 @@ function readFrame(chunk: Buffer) {
         opcode,
         mask: Boolean(mask),
         payloadLen,
+        payload,
     }
 
     console.log(frame);
