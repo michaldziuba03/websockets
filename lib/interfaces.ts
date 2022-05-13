@@ -8,3 +8,9 @@ export interface IFrame {
     payloadLen: number;
     payload: Buffer;
 }
+
+
+export interface ICreateFrameOptions {
+    fin: boolean;
+    opcode: number;
+}

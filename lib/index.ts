@@ -1,5 +1,5 @@
 import { Server } from 'http';
-import { readFrame } from './frame';
+import { createReplyFrame, readFrame } from './frame';
 import { createWsAcceptKey, finalizeHandshake, handleBadWebsocketConnection, validateHeaders } from './http';
 
 const server = new Server((req, res) => {
@@ -17,6 +17,10 @@ const server = new Server((req, res) => {
 
     req.socket.on('data', (buff) => {
         const frame = readFrame(buff);
+        
+        if (frame.opcode === 0x1) {
+            console.log(frame.payload.toString('utf-8'));
+        }
     });
 })
 

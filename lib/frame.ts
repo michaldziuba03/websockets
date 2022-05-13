@@ -1,4 +1,47 @@
-import { IFrame } from "./interfaces";
+import { ICreateFrameOptions, IFrame } from "./interfaces";
+
+function generateFirstByte(options: ICreateFrameOptions): number {
+    const { opcode, fin } = options;
+
+    if (opcode === 0x1 && fin) {
+        return 129;
+    }
+
+    if (opcode === 0x1 && !fin) {
+        return 1;
+    }
+
+    if (opcode === 0x2 && fin) {
+        return 130;
+    }
+
+    return 2;
+}
+
+export function createReplyFrame(payload: Buffer, options: ICreateFrameOptions) {
+    const dataLen = payload.byteLength;
+
+    const firstByte = 129; //generateFirstByte(options);
+    const payloadLen = dataLen === 126 ? 126 : dataLen;
+    const frameSize = 2 + (dataLen === 126 ? 2: 0) + dataLen; 
+
+    const rawFrame = Buffer.alloc(frameSize);
+    rawFrame.writeUInt8(firstByte, 0);
+    rawFrame.writeUInt8(payloadLen, 1);
+    
+    let byteOffset = 2;
+    if (dataLen === 126) {
+        rawFrame.writeUInt16BE(dataLen, byteOffset);
+        byteOffset++;
+    }
+
+    for (let i = 0; i < dataLen; i++) {
+        rawFrame.writeUInt8(payload[i], byteOffset);
+        byteOffset++;
+    }
+
+    return rawFrame;
+}
 
 export function readFrame(chunk: Buffer) {
     // parsing first byte of frame:
