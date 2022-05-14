@@ -3,6 +3,10 @@ import { readFrame } from './frame';
 import { createWsAcceptKey, finalizeHandshake, handleBadWebsocketConnection, validateHeaders } from './http';
 
 const server = new Server((req, res) => {
+    if (req.httpVersion === '1.0') {    // HTTP version 1.0 cannot handle Websocket protocol
+        return handleBadWebsocketConnection(res);
+    }
+
     const headers = req.headers;
 
     try {
