@@ -7,6 +7,7 @@ export interface IFrame {
     mask: boolean;
     payloadLen: number;
     payload: Buffer;
+    frameLen: number;
 }
 
 

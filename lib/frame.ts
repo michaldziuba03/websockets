@@ -96,6 +96,7 @@ export function readFrame(chunk: Buffer) {
         mask,
         payloadLen,
         payload,
+        frameLen: byteOffset + payload.byteLength,
     }
 
     return frame;

@@ -1,5 +1,5 @@
 import { Server } from 'http';
-import { createReplyFrame, readFrame } from './frame';
+import { readFrame } from './frame';
 import { createWsAcceptKey, finalizeHandshake, handleBadWebsocketConnection, validateHeaders } from './http';
 
 const server = new Server((req, res) => {
@@ -16,19 +16,24 @@ const server = new Server((req, res) => {
     finalizeHandshake(res, wsAcceptKey);
 
     req.socket.on('data', (buff) => {
+        console.log('Frames');
         const frame = readFrame(buff);
-        
-        if (frame.opcode === 0x1) {
-            console.log(frame.payload.toString('utf-8'));
-        }
+        console.log(frame);
 
-        if (frame.opcode === 0x8) {
-            console.log('Closing connection...');
-            req.socket.end();
+        let size = buff.byteLength - frame.frameLen;
+        let chunkIndex = frame.frameLen;
+
+        while (size > 0) {
+            const chunk = buff.slice(chunkIndex);
+            const anotherFrame = readFrame(chunk);
+            
+            console.log(anotherFrame);
+
+            size -= anotherFrame.frameLen;
+            chunkIndex += anotherFrame.frameLen;
         }
     });
 })
-
 
 server.listen(8080);
 console.log("Server starting...");
