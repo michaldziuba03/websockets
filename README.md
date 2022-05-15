@@ -198,3 +198,27 @@ if (payloadLen === 126) {
   byteOffset += 2; // because we read 16 bits (2 bytes).
 }
 ```
+
+#### payloadLen === 127 case
+![image](https://user-images.githubusercontent.com/43048524/168486584-60f09fcd-6f7f-4f48-be9d-a11a174bf473.png)
+
+If payloadLen is equal 127, the following 8 bytes interpreted as a 64-bit unsigned integer (the most significant bit MUST be 0) are the payload length.
+
+In JavaScript it is hard to support 64-bit payload length because it's can be Bigint value (not regular JS number type), so we will support only 32-bit integers:
+
+```ts
+...
+if (payloadLen === 127) {
+  const first32bits = chunk.readUInt32BE(byteOffset);
+  const second32bits = chunk.readUInt32BE(byteOffset + 4);
+
+  if (first32bits !== 0) {
+    throw new Error('Payload with 8 byte length is not supported');
+  }
+
+  payloadLen = second32bits;
+  byteOffset += 8; // because we read 64 bits (8 bytes).
+}
+```
+
+Btw - 64-bit is ridiculously big length (we talking about SINGLE frame).
