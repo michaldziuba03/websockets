@@ -128,3 +128,23 @@ const thirdBit = (firstByte >> 5) & 0x1; // 0
 const firstByte = buff.readUint8(byteOffset); // 129 as decimal = 10000001 as binary
 const lastFourBits = firstByte & 15;  // 15 as decimal = 00001111 as binary
 ```
+
+#### Let's actually parse first byte
+```ts
+let byteOffset = 0;
+const firstByte = buff.readUint8(byteOffset);
+
+const fin = Boolean((firstByte >> 7) & 0x1);
+
+const rsv1 = (firstByte >> 6) & 0x1;
+const rsv2 = (firstByte >> 5) & 0x1;
+const rsv3 = (firstByte >> 4) & 0x1;
+
+const opcode = firstByte & 15;
+```
+
+`fin` - our first bit in frame. Indicates that this is the final fragment in a message. `0` - false, `1` - true;
+
+`rsv1`, `rsv2`, `rsv3` - we don't really care about those reserved fields. They are useful for extending WebSocket protocol.
+
+According to RFC: "MUST be 0 unless an extension is negotiated that defines meanings for non-zero values.";
