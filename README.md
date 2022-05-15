@@ -114,7 +114,10 @@ Our `firstByte` variable is interpreted by Node.js as decimal number - How to ge
 
 ##### How to read n-bit? Example:
 ```ts
-const firstBit = (firstByte >> 7) & 0x1;
-const secondBit = (firstByte >> 6) & 0x1;
-const thirdBit = (firstByte >> 5) & 0x1;
+...
+const firstByte = buff.readUint8(byteOffset); // 129 as decimal = 10000001 as binary
+
+const firstBit = (firstByte >> 7) & 0x1; // 1
+const secondBit = (firstByte >> 6) & 0x1; // 0
+const thirdBit = (firstByte >> 5) & 0x1; // 0
 ```
