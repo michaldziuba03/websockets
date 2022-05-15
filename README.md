@@ -158,3 +158,24 @@ According to RFC:
 - `0x8` denotes a connection close
 - `0x9` denotes a ping
 - `0xA` denotes a pong
+
+#### Parsing second byte of frame
+![image](https://user-images.githubusercontent.com/43048524/168483384-c0449989-50ea-4def-bfcd-c4f345d49b1c.png)
+
+```ts
+byteOffset++;   // 1
+const secondByte = buff.readUInt8(byteOffset);
+
+const mask = Boolean((secondByte >> 7) & 0x1);
+let payloadLen = secondByte & 127;
+```
+
+`mask` - (1 bit). Defines whether the payload is masked. If set to 1, a masking key is present in masking-key, and this is used to unmask the payload.
+
+More about `MASK`: https://security.stackexchange.com/questions/113297/whats-the-purpose-of-the-mask-in-a-websocket
+
+`payloadLen` - (7 last bits). the length of payload data. 
+
+According to RFC: "if 0-125, that is the payload length.  If 126, the following 2 bytes interpreted as a 16-bit unsigned integer are the payload length.  If 127, the following 8 bytes interpreted as a 64-bit unsigned integer (the most significant bit MUST be 0) are the payload length."
+
+
