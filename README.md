@@ -303,3 +303,38 @@ function unmask(rawPayload: Buffer, payloadLen: number, maskingKey: Buffer) {
     return payload;
 }
 ```
+
+#### Frame in our TypeScript code
+We want to represent frame as regular object.
+```ts
+interface IFrame {
+  fin: boolean;
+  rsv1: number;
+  rsv2: number;
+  rsv3: number;
+  opcode: number;
+  mask: boolean;
+  payloadLen: number;
+  payload: Buffer;
+  frameLen: number;
+}
+
+...
+...
+
+const rawPayload = buff.slice(byteOffset);
+const payload = mask ? unmask(rawPayload, payloadLen, maskingKey) : rawPayload;
+
+const frame: IFrame = {
+  fin,
+  rsv1,
+  rsv2,
+  rsv3,
+  opcode,
+  mask,
+  payloadLen,
+  payload,
+  frameLen: byteOffset + payload.byteLength,
+}
+
+```
