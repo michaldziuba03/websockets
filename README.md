@@ -248,11 +248,49 @@ if (mask) {
 const rawPayload = buff.slice(byteOffset); // we basically read remaining part of buffer
 const payload = mask ? unmask(rawPayload, payloadLen, maskingKey) : rawPayload;
 ```
+Now, we have to implement `unmask` function.
 
-#### Unmask
-Allocate `payloadLen` bytes of memory for unmasked payload.
+#### Unmask and RFC definition
+According to RFC:
+"The masking does not affect the length of the "Payload data".  To
+   convert masked data into unmasked data, or vice versa, the following
+   algorithm is applied.  The same algorithm applies regardless of the
+   direction of the translation, e.g., the same steps are applied to
+   mask the data as to unmask the data.
+
+   Octet i of the transformed data ("transformed-octet-i") is the XOR of
+   octet i of the original data ("original-octet-i") with octet at index
+   i modulo 4 of the masking key ("masking-key-octet-j"):
+
+     j = i MOD 4
+     transformed-octet-i = original-octet-i XOR masking-key-octet-j
+
+   The payload length, indicated in the framing as frame-payload-length,
+   does NOT include the length of the masking key.  It is the length of
+   the "Payload data", e.g., the number of bytes following the masking
+   key."
+   
+<br />
+
+What `octet` is? Octet just like byte, is equal 8 bits (https://en.wikipedia.org/wiki/Octet_(computing))
+
+`1 octet` = `1 byte` = `8 bits`
+
+What `XOR` means? It's `^` Bitwise operator (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Bitwise_XOR)
+
+What `MOD` means? Modulo operator `%` (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Remainder)
+
+
+#### Unmasking implementation
+1. Allocate `payloadLen` bytes of memory for unmasked payload.
+2. Loop over each byte of payload.
+3. Just like in RFC: declare `j` variable equal `1 MOD 4` (`i % 4`).
+4. Just like in RFC: `unmasked-payload[i] = masked-payload[i] XOR masking-key[j]`
+5. Write unmasked byte to allocated `payload` Buffer with index equal `i`.
+6. We have unmasked payload - we can already READ content.
+
 ```ts
-export function unmask(rawPayload: Buffer, payloadLen: number, maskingKey: Buffer) {
+function unmask(rawPayload: Buffer, payloadLen: number, maskingKey: Buffer) {
     const payload = Buffer.alloc(payloadLen);
     
     for (let i = 0; i < payloadLen; i++) {
