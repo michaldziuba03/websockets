@@ -87,3 +87,34 @@ Important reference: https://www.rfc-editor.org/rfc/rfc6455#section-5.2
 #### Important concepts for parsing frame
 1. What is endianess? (https://www.freecodecamp.org/news/what-is-endianness-big-endian-vs-little-endian/)
 2. Bitwise operators (https://en.wikipedia.org/wiki/Bitwise_operation)
+
+#### Reuse TCP connection socket
+```ts
+const server = new Server((req, res) => {
+  ...
+  finalizeHandshake(res, wsAcceptKey);
+   
+  // We have to use socket from HTTP request. Now we can operate
+  req.socket.on('data', (buff) => {})
+ ```
+
+#### Parsing first byte of frame
+![image](https://user-images.githubusercontent.com/43048524/168479784-566fb245-4e01-4088-a043-0c35fe40c7d8.png)
+
+Read first byte from buffer:
+```ts
+req.socket.on('data', (buff) => {
+  let byteOffset = 0;
+  const firstByte = buff.readUint8(byteOffset);
+})
+```
+
+#### How to read bits (1 byte = 8 bits)?
+Our `firstByte` variable is interpreted by Node.js as decimal number - How to get all information from byte? We have to use bitwise operators for operations on bits.
+
+##### How to read n-bit? Example:
+```ts
+const firstBit = (firstByte >> 7) & 0x1;
+const secondBit = (firstByte >> 6) & 0x1;
+const thirdBit = (firstByte >> 5) & 0x1;
+```
