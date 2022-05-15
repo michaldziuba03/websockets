@@ -163,6 +163,7 @@ According to RFC:
 ![image](https://user-images.githubusercontent.com/43048524/168483384-c0449989-50ea-4def-bfcd-c4f345d49b1c.png)
 
 ```ts
+...
 byteOffset++;   // 1
 const secondByte = buff.readUInt8(byteOffset);
 
@@ -178,4 +179,22 @@ More about `MASK`: https://security.stackexchange.com/questions/113297/whats-the
 
 According to RFC: "if 0-125, that is the payload length.  If 126, the following 2 bytes interpreted as a 16-bit unsigned integer are the payload length.  If 127, the following 8 bytes interpreted as a 64-bit unsigned integer (the most significant bit MUST be 0) are the payload length."
 
+#### payloadLen === 126 case
+![image](https://user-images.githubusercontent.com/43048524/168484792-f6cf7738-8d20-413d-bbf3-d7d4eea59fd8.png)
 
+If payloadLen is equal `126`, the following 2 bytes interpreted as a 16-bit integer. `2 bytes = 16 bits`. 
+
+`readUint16BE(offset)` reads the following 16 bits in the big-endian format (most common format in networking).
+
+```ts
+...
+let payloadLen = secondByte & 127;
+
+byteOffset++;
+
+if (payloadLen === 126) {
+  payloadLen = buff.readUint16BE(byteOffset);
+
+  byteOffset += 2; // because we read 16 bits (2 bytes).
+}
+```
