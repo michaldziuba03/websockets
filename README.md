@@ -94,7 +94,7 @@ const server = new Server((req, res) => {
   ...
   finalizeHandshake(res, wsAcceptKey);
    
-  // We have to use socket from HTTP request. Now we can operate
+  // We have to reuse socket from HTTP request. Now we can operate on TCP level
   req.socket.on('data', (buff) => {})
  ```
 
@@ -120,4 +120,11 @@ const firstByte = buff.readUint8(byteOffset); // 129 as decimal = 10000001 as bi
 const firstBit = (firstByte >> 7) & 0x1; // 1
 const secondBit = (firstByte >> 6) & 0x1; // 0
 const thirdBit = (firstByte >> 5) & 0x1; // 0
+```
+
+##### How to read last n-bits? Example:
+```ts
+...
+const firstByte = buff.readUint8(byteOffset); // 129 as decimal = 10000001 as binary
+const lastFourBits = firstByte & 15;  // 15 as decimal = 00001111 as binary
 ```
