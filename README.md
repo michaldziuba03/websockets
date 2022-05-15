@@ -75,3 +75,15 @@ function finalizeHandshake(res: ServerResponse, wsAcceptKey: string) {
     res.end();
 }
 ```
+
+### Second stage - parsing WebSocket frame
+<img src="https://user-images.githubusercontent.com/43048524/168477955-780ff531-b2e3-4746-bc9a-549204d6c8c9.png" />
+
+Important reference: https://www.rfc-editor.org/rfc/rfc6455#section-5.2
+
+
+1 byte = 8 bits
+
+#### Important concepts for parsing frame
+1. What is endianess? (https://www.freecodecamp.org/news/what-is-endianness-big-endian-vs-little-endian/)
+2. Bitwise operators (https://en.wikipedia.org/wiki/Bitwise_operation)
