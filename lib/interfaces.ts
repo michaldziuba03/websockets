@@ -8,7 +8,6 @@ export interface IFrame {
     payloadLen: number;
     payload: Buffer;
     frameLen: number;
-    isCompleted: true;
 }
 
 export interface IFragmentedFrame {

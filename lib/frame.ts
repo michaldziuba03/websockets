@@ -43,88 +43,155 @@ export function createReplyFrame(payload: Buffer, options: ICreateFrameOptions) 
     return rawFrame;
 }
 
-export function readFrame(chunk: Buffer) {
-    // parsing first byte of frame:
-    let byteOffset = 0;
-    const firstByte = chunk.readUint8(byteOffset);
+export class WebsocketParser {
+    private parsedFrames: IFrame[] = []; 
+    private fragmentedFrame: IFragmentedFrame | undefined;
 
-    const fin = Boolean((firstByte >> 7) & 0x1);
-
-    const rsv1 = (firstByte >> 6) & 0x1;
-    const rsv2 = (firstByte >> 5) & 0x1;
-    const rsv3 = (firstByte >> 4) & 0x1;
-
-    const opcode = firstByte & 15;
-    
-    // parsing second byte of frame:
-    byteOffset++;
-    const secondByte = chunk.readUInt8(byteOffset);
-
-    const mask = Boolean((secondByte >> 7) & 0x1);
-    let payloadLen = secondByte & 127;
-
-    // parsing another bytes of frame:
-    byteOffset++;
-
-    if (payloadLen === 126) {
-        payloadLen = chunk.readUint16BE(byteOffset);
-
-        byteOffset += 2; // because we read 16 bits (2 bytes).
+    get frames() {
+        return this.parsedFrames;
     }
 
-    if (payloadLen === 127) {
-        const first32bits = chunk.readUInt32BE(byteOffset);
-        const second32bits = chunk.readUInt32BE(byteOffset + 4);
+    clearFrames() {
+        this.parsedFrames = [];
+    }
 
-        if (first32bits !== 0) {
-            throw new Error('Payload with 8 byte length is not supported');
+    public readFrame(chunk: Buffer) {
+        chunk = this.readFragmentedBuffer(chunk);
+        if (chunk.byteLength <= 0) {
+            return chunk;
         }
 
-        payloadLen = second32bits;
-        byteOffset += 8; // because we read 64 bits (8 bytes).
-    }
-
-    let maskingKey = Buffer.alloc(4);
-    if (mask) {
-        maskingKey = chunk.slice(byteOffset, byteOffset + 4) 
-        byteOffset += 4; // because we read 4 bytes.
-    }
-
-    const rawPayload = chunk.slice(byteOffset);
-    if (rawPayload.byteLength < payloadLen) {   // 
-        const uncompletedFrame: IFragmentedFrame = {
+        // parsing first byte of frame:
+        let byteOffset = 0;
+        const firstByte = chunk.readUint8(byteOffset);
+    
+        const fin = Boolean((firstByte >> 7) & 0x1);
+    
+        const rsv1 = (firstByte >> 6) & 0x1;
+        const rsv2 = (firstByte >> 5) & 0x1;
+        const rsv3 = (firstByte >> 4) & 0x1;
+    
+        const opcode = firstByte & 15;
+        
+        // parsing second byte of frame:
+        byteOffset++;
+        const secondByte = chunk.readUInt8(byteOffset);
+    
+        const mask = Boolean((secondByte >> 7) & 0x1);
+        let payloadLen = secondByte & 127;
+    
+        // parsing another bytes of frame:
+        byteOffset++;
+    
+        if (payloadLen === 126) {
+            payloadLen = chunk.readUint16BE(byteOffset);
+    
+            byteOffset += 2; // because we read 16 bits (2 bytes).
+        }
+    
+        if (payloadLen === 127) {
+            const first32bits = chunk.readUInt32BE(byteOffset);
+            const second32bits = chunk.readUInt32BE(byteOffset + 4);
+    
+            if (first32bits !== 0) {
+                throw new Error('Payload with 8 byte length is not supported');
+            }
+    
+            payloadLen = second32bits;
+            byteOffset += 8; // because we read 64 bits (8 bytes).
+        }
+    
+        let maskingKey = Buffer.alloc(4);
+        if (mask) {
+            maskingKey = chunk.slice(byteOffset, byteOffset + 4) 
+            byteOffset += 4; // because we read 4 bytes.
+        }
+    
+        const rawPayload = chunk.slice(byteOffset, byteOffset+payloadLen);
+        const remainingBuff = chunk.slice(byteOffset+payloadLen);
+        
+        if (rawPayload.byteLength < payloadLen) { 
+            this.fragmentedFrame = {
+                fin,
+                rsv1,
+                rsv2,
+                rsv3,
+                mask,
+                isCompleted: false,
+                opcode,
+                payloadLen,
+                rawPayload,
+                maskingKey,
+                byteOffset,
+            }
+    
+            return Buffer.alloc(0);
+        }
+    
+        const payload = mask ? unmask(rawPayload, payloadLen, maskingKey) : rawPayload;
+    
+        const frame: IFrame = {
             fin,
             rsv1,
             rsv2,
             rsv3,
-            mask,
-            isCompleted: false,
             opcode,
+            mask,
             payloadLen,
-            rawPayload,
-            maskingKey,
-            byteOffset,
+            payload,
+            frameLen: byteOffset + payload.byteLength,
+        }
+        
+        this.parsedFrames.push(frame);
+        
+        return remainingBuff;
+    }
+
+    public readFragmentedBuffer(chunk: Buffer) {
+        if (!this.fragmentedFrame) {
+            return chunk;
         }
 
-        return uncompletedFrame;
+        const remainingByteLen = this.fragmentedFrame.payloadLen - this.fragmentedFrame.rawPayload.byteLength;
+
+        if (remainingByteLen > chunk.byteLength) {
+            this.fragmentedFrame.rawPayload = Buffer.concat(
+                [this.fragmentedFrame.rawPayload, chunk],
+                this.fragmentedFrame.rawPayload.byteLength + chunk.byteLength,
+            );
+
+            return Buffer.alloc(0);
+        }
+
+        const remainingPart = chunk.slice(0, remainingByteLen);
+        this.fragmentedFrame.rawPayload = Buffer.concat(
+            [this.fragmentedFrame.rawPayload, remainingPart],
+            this.fragmentedFrame.rawPayload.byteLength + remainingByteLen,
+        );
+
+        const payload = this.fragmentedFrame.mask ? unmask(
+            this.fragmentedFrame.rawPayload,
+            this.fragmentedFrame.payloadLen,
+            this.fragmentedFrame.maskingKey,
+        ) : this.fragmentedFrame.rawPayload;
+
+        const frame: IFrame = {
+            fin: this.fragmentedFrame.fin,
+            rsv1: this.fragmentedFrame.rsv1,
+            rsv2: this.fragmentedFrame.rsv2,
+            rsv3: this.fragmentedFrame.rsv3,
+            opcode: this.fragmentedFrame.opcode,
+            mask: this.fragmentedFrame.mask,
+            payload,
+            payloadLen: this.fragmentedFrame.payloadLen,
+            frameLen: this.fragmentedFrame.byteOffset + payload.byteLength,
+        }
+
+        this.parsedFrames.push(frame);
+        this.fragmentedFrame = undefined;
+
+        return chunk.slice(remainingByteLen);
     }
-
-    const payload = mask ? unmask(rawPayload, payloadLen, maskingKey) : rawPayload;
-
-    const frame: IFrame = {
-        fin,
-        rsv1,
-        rsv2,
-        rsv3,
-        opcode,
-        mask,
-        payloadLen,
-        payload,
-        frameLen: byteOffset + payload.byteLength,
-        isCompleted: true,
-    }
-
-    return frame;
 }
 
 export function unmask(rawPayload: Buffer, payloadLen: number, maskingKey: Buffer) {
