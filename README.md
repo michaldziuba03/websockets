@@ -148,3 +148,13 @@ const opcode = firstByte & 15;
 `rsv1`, `rsv2`, `rsv3` - we don't really care about those reserved fields. They are useful for extending WebSocket protocol.
 
 According to RFC: "MUST be 0 unless an extension is negotiated that defines meanings for non-zero values.";
+
+`opcode` - four bits. Defines the type of payload data.
+
+According to RFC: 
+- `0x0`  denotes a continuation frame
+- `0x1` denotes a text frame
+- `0x2` denotes a binary frame
+- `0x8` denotes a connection close
+- `0x9` denotes a ping
+- `0xA` denotes a pong
