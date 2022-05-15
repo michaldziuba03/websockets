@@ -8,7 +8,7 @@
 />
 
 ## Painful process
-Websocket protocol was harder to implement than I initially thought. I learned a lot about networking and dealing with bitwise operations. Although it is not perfect, it can handle larger files (like images and videos).
+Websocket protocol was harder to implement than I initially thought. I learned a lot about networking and dealing with bitwise operations. Although my implementation is not perfect, it can handle larger files (like images and videos).
 
 ### Two main challenges
 Handling large WS frames is hard because we have to deal with frame fragmentation over TCP data stream. Second major challenge is parsing WS frame.
@@ -57,5 +57,21 @@ function createWsAcceptKey(wsKey: string): string {
     return createHash('sha1')
         .update(Buffer.from(dataToHash))
         .digest('base64');
+}
+```
+
+#### Finalizing WebSocket handshake
+Just send required headers like `Upgrade`, `Connection` and `Sec-WebSocket-Accept`. Remember about HTTP status code `101` (Switching Protocols) and body with extra blank line at the end.
+```ts
+function finalizeHandshake(res: ServerResponse, wsAcceptKey: string) {
+    res.statusCode = 101;
+    
+    // set headers:
+    res.setHeader('Upgrade', 'websocket');
+    res.setHeader('Connection', 'Upgrade');
+    res.setHeader('Sec-WebSocket-Accept', wsAcceptKey);
+    
+    res.write('\r\n');
+    res.end();
 }
 ```
