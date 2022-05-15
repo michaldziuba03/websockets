@@ -222,3 +222,21 @@ if (payloadLen === 127) {
 ```
 
 Btw - 64-bit is ridiculously big length (we talking about SINGLE frame).
+
+#### Reading Masking-key
+![image](https://user-images.githubusercontent.com/43048524/168487900-b84a0342-0c04-4c14-bad0-21224e62e2aa.png)
+
+That part of frame depends on `mask` value. Web browsers ALWAYS mask their frames, so expect `mask` to be `true`.
+If `mask` is `false`, we skip `Masking-key` part.
+
+According to RFC: "All frames sent from the client to the server are masked by a 32-bit value that is contained within the frame. This field is present if the mask bit is set to 1 and is absent if the mask bit is set to 0."
+
+I recommend keeping `maskingKey` as four byte Buffer, instead just 32-bit decimal. It will make unmasking payload process easier (in my opinion).
+```ts
+...
+let maskingKey = Buffer.alloc(4);
+if (mask) {
+  maskingKey = chunk.slice(byteOffset, byteOffset + 4);
+  byteOffset += 4; // because we read 4 bytes.
+}
+```
