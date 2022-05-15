@@ -182,7 +182,7 @@ According to RFC: "if 0-125, that is the payload length.  If 126, the following 
 #### payloadLen === 126 case
 ![image](https://user-images.githubusercontent.com/43048524/168484792-f6cf7738-8d20-413d-bbf3-d7d4eea59fd8.png)
 
-If payloadLen is equal `126`, the following 2 bytes interpreted as a 16-bit integer. `2 bytes = 16 bits`. 
+If payloadLen is equal `126`, the following 2 bytes interpreted as a 16-bit integer are the payload length. `2 bytes = 16 bits`. 
 
 `readUint16BE(offset)` reads the following 16 bits in the big-endian format (most common format in networking).
 
