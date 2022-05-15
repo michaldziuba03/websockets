@@ -11,7 +11,7 @@ export interface IFrame {
     isCompleted: true;
 }
 
-export interface IUncompletedFrame {
+export interface IFragmentedFrame {
     fin: boolean;
     rsv1: number;
     rsv2: number;
@@ -29,3 +29,10 @@ export interface ICreateFrameOptions {
     fin: boolean;
     opcode: number;
 }
+
+export interface Message {
+    data: Buffer;
+    type: 'binary' | 'string';
+}
+
+export type OnDataListener = (msg: Message) => any;

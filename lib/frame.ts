@@ -1,4 +1,4 @@
-import { ICreateFrameOptions, IFrame, IUncompletedFrame } from "./interfaces";
+import { ICreateFrameOptions, IFrame, IFragmentedFrame } from "./interfaces";
 
 function generateFirstByte(options: ICreateFrameOptions): number {
     const { opcode, fin } = options;
@@ -73,8 +73,6 @@ export function readFrame(chunk: Buffer) {
     }
 
     if (payloadLen === 127) {
-        //const biguintLen = chunk.readBigUint64BE(byteOffset);
-        //payloadLen = Number(biguintLen); // bad and slow way.
         const first32bits = chunk.readUInt32BE(byteOffset);
         const second32bits = chunk.readUInt32BE(byteOffset + 4);
 
@@ -93,8 +91,8 @@ export function readFrame(chunk: Buffer) {
     }
 
     const rawPayload = chunk.slice(byteOffset);
-    if (rawPayload.byteLength < payloadLen) {
-        const uncompletedFrame: IUncompletedFrame = {
+    if (rawPayload.byteLength < payloadLen) {   // 
+        const uncompletedFrame: IFragmentedFrame = {
             fin,
             rsv1,
             rsv2,
@@ -131,8 +129,7 @@ export function readFrame(chunk: Buffer) {
 
 export function unmask(rawPayload: Buffer, payloadLen: number, maskingKey: Buffer) {
     const payload = Buffer.alloc(payloadLen);
-    console.log('rawPayload:', rawPayload.byteLength, 'payloadLen:', payloadLen);
-
+    
     for (let i = 0; i < payloadLen; i++) {
         const j = i % 4;
         const decoded = rawPayload[i] ^ (maskingKey[j]);
