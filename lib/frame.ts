@@ -1,4 +1,4 @@
-import { ICreateFrameOptions, IFrame } from "./interfaces";
+import { ICreateFrameOptions, IFrame, IUncompletedFrame } from "./interfaces";
 
 function generateFirstByte(options: ICreateFrameOptions): number {
     const { opcode, fin } = options;
@@ -73,8 +73,16 @@ export function readFrame(chunk: Buffer) {
     }
 
     if (payloadLen === 127) {
-        const biguintLen = chunk.readBigUint64BE(byteOffset);
-        payloadLen = Number(biguintLen); // bad and slow way.
+        //const biguintLen = chunk.readBigUint64BE(byteOffset);
+        //payloadLen = Number(biguintLen); // bad and slow way.
+        const first32bits = chunk.readUInt32BE(byteOffset);
+        const second32bits = chunk.readUInt32BE(byteOffset + 4);
+
+        if (first32bits !== 0) {
+            throw new Error('Payload with 8 byte length is not supported');
+        }
+
+        payloadLen = second32bits;
         byteOffset += 8; // because we read 64 bits (8 bytes).
     }
 
@@ -85,6 +93,24 @@ export function readFrame(chunk: Buffer) {
     }
 
     const rawPayload = chunk.slice(byteOffset);
+    if (rawPayload.byteLength < payloadLen) {
+        const uncompletedFrame: IUncompletedFrame = {
+            fin,
+            rsv1,
+            rsv2,
+            rsv3,
+            mask,
+            isCompleted: false,
+            opcode,
+            payloadLen,
+            rawPayload,
+            maskingKey,
+            byteOffset,
+        }
+
+        return uncompletedFrame;
+    }
+
     const payload = mask ? unmask(rawPayload, payloadLen, maskingKey) : rawPayload;
 
     const frame: IFrame = {
@@ -97,13 +123,15 @@ export function readFrame(chunk: Buffer) {
         payloadLen,
         payload,
         frameLen: byteOffset + payload.byteLength,
+        isCompleted: true,
     }
 
     return frame;
 }
 
-function unmask(rawPayload: Buffer, payloadLen: number, maskingKey: Buffer) {
+export function unmask(rawPayload: Buffer, payloadLen: number, maskingKey: Buffer) {
     const payload = Buffer.alloc(payloadLen);
+    console.log('rawPayload:', rawPayload.byteLength, 'payloadLen:', payloadLen);
 
     for (let i = 0; i < payloadLen; i++) {
         const j = i % 4;
