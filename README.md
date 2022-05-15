@@ -1,5 +1,7 @@
 # Websocket server 
-#### Simplified websocket server implementation in TypeScript
+#### Simplified websocket protocol implementation for server in TypeScript.
+
+It is not intended for use in production. Use community approved projects instead.
 
 <img 
   width="620px" 
