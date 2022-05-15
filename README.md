@@ -209,8 +209,8 @@ In JavaScript it is hard to support 64-bit payload length because it's can be Bi
 ```ts
 ...
 if (payloadLen === 127) {
-  const first32bits = chunk.readUInt32BE(byteOffset);
-  const second32bits = chunk.readUInt32BE(byteOffset + 4);
+  const first32bits = buff.readUInt32BE(byteOffset);
+  const second32bits = buff.readUInt32BE(byteOffset + 4);
 
   if (first32bits !== 0) {
     throw new Error('Payload with 8 byte length is not supported');
@@ -236,7 +236,32 @@ I recommend keeping `maskingKey` as four byte Buffer, instead just 32-bit decima
 ...
 let maskingKey = Buffer.alloc(4);
 if (mask) {
-  maskingKey = chunk.slice(byteOffset, byteOffset + 4);
+  maskingKey = buff.slice(byteOffset, byteOffset + 4);
   byteOffset += 4; // because we read 4 bytes.
+}
+```
+
+#### Reading Payload-Data
+![image](https://user-images.githubusercontent.com/43048524/168488647-9ac72c36-23da-4e2b-be13-fdb071c261ad.png)
+
+```ts
+const rawPayload = buff.slice(byteOffset); // we basically read remaining part of buffer
+const payload = mask ? unmask(rawPayload, payloadLen, maskingKey) : rawPayload;
+```
+
+#### Unmask
+Allocate `payloadLen` bytes of memory for unmasked payload.
+```ts
+export function unmask(rawPayload: Buffer, payloadLen: number, maskingKey: Buffer) {
+    const payload = Buffer.alloc(payloadLen);
+    
+    for (let i = 0; i < payloadLen; i++) {
+        const j = i % 4;
+        const decoded = rawPayload[i] ^ (maskingKey[j]);
+
+        payload.writeUInt8(decoded, i);
+    }
+
+    return payload;
 }
 ```
