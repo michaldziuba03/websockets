@@ -9,7 +9,7 @@ wsServer.on('data', (msg) => {
         writeFileSync('img.png', msg.data);
     }
     else {
-        console.log('GOt string:', msg.data.toString('utf-8'));
+        console.log('Got text:', msg.data.toString('utf-8'));
     }
 });
 

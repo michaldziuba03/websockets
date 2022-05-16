@@ -1,3 +1,5 @@
+import { ClosureStatus } from "./constants";
+import { WebSocketError } from "./errors";
 import { ICreateFrameOptions, IFrame, IFragmentedFrame } from "./interfaces";
 
 function generateFirstByte(options: ICreateFrameOptions): number {
@@ -18,30 +20,6 @@ function generateFirstByte(options: ICreateFrameOptions): number {
     return 2;
 }
 
-export function createReplyFrame(payload: Buffer, options: ICreateFrameOptions) {
-    const dataLen = payload.byteLength;
-
-    const firstByte = generateFirstByte(options); // 129;
-    const payloadLen = dataLen === 126 ? 126 : dataLen;
-    const frameSize = 2 + (dataLen === 126 ? 2: 0) + dataLen; 
-
-    const rawFrame = Buffer.alloc(frameSize);
-    rawFrame.writeUInt8(firstByte, 0);
-    rawFrame.writeUInt8(payloadLen, 1);
-    
-    let byteOffset = 2;
-    if (dataLen === 126) {
-        rawFrame.writeUInt16BE(dataLen, byteOffset);
-        byteOffset++;
-    }
-
-    for (let i = 0; i < dataLen; i++) {
-        rawFrame.writeUInt8(payload[i], byteOffset);
-        byteOffset++;
-    }
-
-    return rawFrame;
-}
 
 export class WebsocketParser {
     private parsedFrames: IFrame[] = []; 
@@ -53,6 +31,31 @@ export class WebsocketParser {
 
     clearFrames() {
         this.parsedFrames = [];
+    }
+
+    public createFrame(payload: Buffer, options: ICreateFrameOptions) {
+        const dataLen = payload.byteLength;
+
+        const firstByte = generateFirstByte(options); // 129;
+        const payloadLen = dataLen === 126 ? 126 : dataLen;
+        const frameSize = 2 + (dataLen === 126 ? 2: 0) + dataLen; 
+    
+        const rawFrame = Buffer.alloc(frameSize);
+        rawFrame.writeUInt8(firstByte, 0);
+        rawFrame.writeUInt8(payloadLen, 1);
+        
+        let byteOffset = 2;
+        if (dataLen === 126) {
+            rawFrame.writeUInt16BE(dataLen, byteOffset);
+            byteOffset++;
+        }
+    
+        for (let i = 0; i < dataLen; i++) {
+            rawFrame.writeUInt8(payload[i], byteOffset);
+            byteOffset++;
+        }
+    
+        return rawFrame;
     }
 
     public readFrame(chunk: Buffer) {
@@ -70,6 +73,10 @@ export class WebsocketParser {
         const rsv1 = (firstByte >> 6) & 0x1;
         const rsv2 = (firstByte >> 5) & 0x1;
         const rsv3 = (firstByte >> 4) & 0x1;
+
+        if (rsv1 !== 0 || rsv2 !== 0 || rsv3 !== 0) {
+            throw new WebSocketError(ClosureStatus.PROTOCOL_ERROR);
+        }
     
         const opcode = firstByte & 15;
         
