@@ -98,6 +98,7 @@ const server = new Server((req, res) => {
    
   // We have to reuse socket from HTTP request. Now we can operate on TCP level
   req.socket.on('data', (buff) => {})
+});
  ```
 
 #### Parsing first byte of frame
@@ -342,3 +343,127 @@ const frame: IFrame = {
 ```
 
 ### Third stage - we did it wrong
+
+My current code:
+```ts
+const server = new Server((req, res) => {
+    const wsKey = req.headers['sec-websocket-key'];
+    const wsAcceptKey = createWsAcceptKey(wsKey!);
+    finalizeHandshake(res, wsAcceptKey);
+     
+    // We have to reuse socket from HTTP request. Now we can operate on TCP level
+    req.socket.on('data', (buff) => {
+        let byteOffset = 0;
+        const firstByte = buff.readUint8(byteOffset);
+
+        const fin = Boolean((firstByte >> 7) & 0x1);
+
+        const rsv1 = (firstByte >> 6) & 0x1;
+        const rsv2 = (firstByte >> 5) & 0x1;
+        const rsv3 = (firstByte >> 4) & 0x1;
+
+        const opcode = firstByte & 15;
+
+        byteOffset++;   // 1
+        const secondByte = buff.readUInt8(byteOffset);
+
+        const mask = Boolean((secondByte >> 7) & 0x1);
+        let payloadLen = secondByte & 127;
+
+        byteOffset++;
+
+        if (payloadLen === 126) {
+            payloadLen = buff.readUint16BE(byteOffset);
+
+            byteOffset += 2; // because we read 16 bits (2 bytes).
+        }
+
+        if (payloadLen === 127) {
+            const first32bits = buff.readUInt32BE(byteOffset);
+            const second32bits = buff.readUInt32BE(byteOffset + 4);
+          
+            if (first32bits !== 0) {
+              throw new Error('Payload with 8 byte length is not supported');
+            }
+          
+            payloadLen = second32bits;
+            byteOffset += 8; // because we read 64 bits (8 bytes).
+        }
+
+        let maskingKey = Buffer.alloc(4);
+        if (mask) {
+            maskingKey = buff.slice(byteOffset, byteOffset + 4);
+            byteOffset += 4; // because we read 4 bytes.
+        }
+
+        const rawPayload = buff.slice(byteOffset); // we basically read remaining part of buffer
+        const payload = mask ? unmask(rawPayload, payloadLen, maskingKey) : rawPayload;
+
+        const frame: IFrame = {
+            fin,
+            rsv1,
+            rsv2,
+            rsv3,
+            opcode,
+            mask,
+            payloadLen,
+            payload,
+            frameLen: byteOffset + payload.byteLength,
+          }
+
+        console.log(frame.payload.toString('utf-8'));
+    })
+});
+
+server.listen(8080);
+```
+
+Let's test our WebSocket server - connect to server with browser dev tools.
+
+![image](https://user-images.githubusercontent.com/43048524/168587204-e7dbf48d-002a-43d2-ae40-c50b6386158c.png)
+
+Server:
+
+![image](https://user-images.githubusercontent.com/43048524/168587454-0c40c622-5fd5-41a7-b8f3-0b916efb9922.png)
+
+
+Everything looks fine. What we did wrong? Okay, let's send many messages in short amount of time.
+
+![image](https://user-images.githubusercontent.com/43048524/168587743-0ecc3dfa-9714-4ef7-84dd-37b002903b41.png)
+
+Server:
+
+![image](https://user-images.githubusercontent.com/43048524/168587862-444c854e-469d-47c3-bbb6-b06f938287af.png)
+
+#### Where our second message?
+Add `console.log(buff)` and observe Buffer value;
+```ts
+const server = new Server((req, res) => {
+    const wsKey = req.headers['sec-websocket-key'];
+    const wsAcceptKey = createWsAcceptKey(wsKey!);
+    finalizeHandshake(res, wsAcceptKey);
+     
+    // We have to reuse socket from HTTP request. Now we can operate on TCP level
+    req.socket.on('data', (buff) => {
+        console.log(buff);
+        let byteOffset = 0;
+        const firstByte = buff.readUint8(byteOffset);
+ ```
+ 
+ Client:
+ 
+ ![image](https://user-images.githubusercontent.com/43048524/168588732-6c6e5593-8c90-4848-a0fe-a62dea283ff2.png)
+
+Server:
+ 
+ ![image](https://user-images.githubusercontent.com/43048524/168588600-11847f11-0c06-466d-a886-84e10102c11e.png)
+
+#### Explanation
+Web browser to send TCP packets uses Nagle's algorithm (https://en.wikipedia.org/wiki/Nagle%27s_algorithm) - for better efficiency.
+
+Lets assume both WS frames have 17 byte size.
+Every TCP packet has 40-byte header.
+
+If browser send each frame as seperate packet - it will transfer 57 + 57 = 114 bytes.
+
+If browser send both frames in one packet - it will transfer 57+17=74 bytes.
