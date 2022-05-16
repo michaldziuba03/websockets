@@ -287,7 +287,7 @@ What `MOD` means? Modulo operator `%` (https://developer.mozilla.org/en-US/docs/
 #### Unmasking implementation
 1. Allocate `payloadLen` bytes of memory for unmasked payload.
 2. Loop over each byte of payload.
-3. Just like in RFC: declare `j` variable equal `1 MOD 4` (`i % 4`).
+3. Just like in RFC: declare `j` variable equal `i MOD 4` (`i % 4`).
 4. Just like in RFC: `unmasked-payload[i] = masked-payload[i] XOR masking-key[j]`
 5. Write unmasked byte to allocated `payload` Buffer with index equal `i`.
 6. We have unmasked payload - we can already READ content.
