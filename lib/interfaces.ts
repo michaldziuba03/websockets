@@ -19,7 +19,6 @@ export interface IFragmentedFrame {
     mask: boolean;
     payloadLen: number;
     rawPayload: Buffer;
-    isCompleted: false;
     maskingKey: Buffer;
     byteOffset: number;
 }

@@ -117,7 +117,6 @@ export class WebsocketParser {
                 rsv2,
                 rsv3,
                 mask,
-                isCompleted: false,
                 opcode,
                 payloadLen,
                 rawPayload,

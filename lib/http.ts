@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
 import { IncomingHttpHeaders, ServerResponse } from "http";
+import { SUPPORTED_VERSION } from "./constants";
 
 export function handleBadWebsocketConnection(res: ServerResponse) {
     res.statusCode = 400;
@@ -7,7 +8,6 @@ export function handleBadWebsocketConnection(res: ServerResponse) {
     res.end();
 }
 
-const SUPPORTED_VERSION = 13;
 // FIRST STEP:
 export function validateHeaders(headers: IncomingHttpHeaders) {
     if (!headers.upgrade || headers.upgrade !== "websocket") {
