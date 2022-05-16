@@ -467,3 +467,73 @@ Every TCP packet has 40-byte header.
 If browser send each frame as seperate packet - it will transfer 57 + 57 = 114 bytes.
 
 If browser send both frames in one packet - it will transfer 57+17=74 bytes.
+
+#### Let's fix that problem
+1. Create class `WebsocketParser` - copy and paste parsing code to `readFrame` method and make a few changes.
+```ts
+class WebsocketParser {
+  parsedFrames: IFrame[] = [];
+  
+  public readFrame(buff: Buffer) {
+    let byteOffset = 0;
+    const firstByte = buff.readUint8(byteOffset);
+    
+    ....
+    
+    const rawPayload = buff.slice(byteOffset, byteOffset+payloadLen); // read buffer ONLY from byteOffset to payloadLen. 
+    const remainingBuff = buff.slice(byteOffset+payloadLen); // reamaining buffer - maybe our second frame?
+    const payload = mask ? unmask(rawPayload, payloadLen, maskingKey) : rawPayload;
+
+    const frame: IFrame = {
+      fin,
+      rsv1,
+      rsv2,
+      rsv3,
+      opcode,
+      mask,
+      payloadLen,
+      payload,
+      frameLen: byteOffset + payload.byteLength,
+    }
+
+    this.parsedFrames.push(frame);
+  }
+}
+
+```
+
+2. Update our `data` handler
+```ts
+const server = new Server((req, res) => {
+    const wsKey = req.headers['sec-websocket-key'];
+    const wsAcceptKey = createWsAcceptKey(wsKey!);
+    finalizeHandshake(res, wsAcceptKey);
+
+    const parser = new WebsocketParser();
+
+    req.socket.on('data', (buff) => {
+        let remainingBuff = parser.readFrame(buff);
+        
+        while (remainingBuff.byteLength > 0) {
+            remainingBuff = parser.readFrame(remainingBuff);
+        }
+
+        for (const frame of parser.parsedFrames) {
+            console.log(frame.payload.toString('utf-8'));
+        }
+        
+        parser.parsedFrames = [];
+    })
+});
+```
+
+3. Test
+
+Client:
+
+![image](https://user-images.githubusercontent.com/43048524/168601640-e29abd3a-c5ad-451c-b30f-0685820395c9.png)
+
+Server:
+
+![image](https://user-images.githubusercontent.com/43048524/168601561-e5dc15dc-417e-4655-b47f-066c462a1836.png)
+
