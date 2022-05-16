@@ -497,6 +497,8 @@ class WebsocketParser {
     }
 
     this.parsedFrames.push(frame);
+    
+    return remainingBuff;
   }
 }
 
