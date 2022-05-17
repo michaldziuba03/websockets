@@ -130,6 +130,8 @@ const thirdBit = (firstByte >> 5) & 0x1; // 0
 ...
 const firstByte = buff.readUint8(byteOffset); // 129 as decimal = 10000001 as binary
 const lastFourBits = firstByte & 15;  // 15 as decimal = 00001111 as binary
+
+console.log(lastFourBits) // 1 as decimal = 0001 as binary
 ```
 
 #### Let's actually parse first byte
@@ -224,7 +226,7 @@ if (payloadLen === 127) {
 }
 ```
 
-Btw - 64-bit is ridiculously big length (we talking about SINGLE frame).
+Btw - 64-bit is ridiculously big length (we are talking about SINGLE frame).
 
 #### Reading Masking-key
 ![image](https://user-images.githubusercontent.com/43048524/168487900-b84a0342-0c04-4c14-bad0-21224e62e2aa.png)
