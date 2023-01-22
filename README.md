@@ -1,4 +1,4 @@
-# Websocket server 
+# Websocket protocol 
 #### Simplified websocket protocol implementation for server in TypeScript.
 
 It is not intended for use in production. Use community approved projects instead.
